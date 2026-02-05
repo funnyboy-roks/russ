@@ -261,6 +261,9 @@ enum Action {
     MoveDown,
     MoveUp,
     MoveRight,
+    MoveTop,
+    MoveBottom,
+    RestoreScroll,
     PageUp,
     PageDown,
     RefreshAll,
@@ -304,6 +307,9 @@ fn get_action(app: &App, event: Event<KeyEvent>) -> Option<Action> {
                     (KeyCode::Right, _) | (KeyCode::Char('l'), _) => Some(Action::MoveRight),
                     (KeyCode::Down, _) | (KeyCode::Char('j'), _) => Some(Action::MoveDown),
                     (KeyCode::Up, _) | (KeyCode::Char('k'), _) => Some(Action::MoveUp),
+                    (KeyCode::Char('g'), _) => Some(Action::MoveTop),
+                    (KeyCode::Char('G'), _) => Some(Action::MoveBottom),
+                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => Some(Action::RestoreScroll),
                     (KeyCode::PageUp, _) | (KeyCode::Char('u'), KeyModifiers::CONTROL) => {
                         Some(Action::PageUp)
                     }
@@ -366,6 +372,9 @@ fn update(app: &mut App, action: Action) -> Result<()> {
         Action::MoveDown => app.on_down()?,
         Action::MoveUp => app.on_up()?,
         Action::MoveRight => app.on_right()?,
+        Action::MoveTop => app.on_top()?,
+        Action::MoveBottom => app.on_bottom()?,
+        Action::RestoreScroll => app.restore_scroll(),
         Action::PageUp => app.page_up(),
         Action::PageDown => app.page_down(),
         Action::ToggleHelp => app.toggle_help()?,
