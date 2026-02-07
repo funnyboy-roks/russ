@@ -12,10 +12,12 @@ use crossterm::terminal::{
 };
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use std::io::stdout;
+use std::fs::File;
+use std::io::{BufReader, stdout};
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::{thread, time};
+use syntect::highlighting::{Theme, ThemeSet};
 
 mod app;
 mod io;
@@ -65,6 +67,9 @@ enum Command {
         /// RSS/Atom network request timeout in seconds
         #[arg(short, long, default_value = "5", value_parser = parse_seconds)]
         network_timeout: time::Duration,
+        /// The theme to use when highlighting the markdown of an article
+        #[arg(long)]
+        theme: Option<PathBuf>,
     },
     /// Import feeds from an OPML document
     Import {
@@ -90,14 +95,33 @@ impl Command {
                 tick_rate,
                 flash_display_duration_seconds,
                 network_timeout,
+                theme,
             } => {
                 let database_path = get_database_path(database_path)?;
+
+                let theme = theme
+                    .as_ref()
+                    .map(|theme| {
+                        let file = File::open(theme)?;
+                        let mut file = BufReader::new(file);
+
+                        ThemeSet::load_from_reader(&mut file).map_err(std::io::Error::other)
+                    })
+                    .transpose()?
+                    .unwrap_or_else(|| {
+                        ThemeSet::load_defaults()
+                            .themes
+                            .remove("base16-ocean.dark")
+                            .expect("This is one of the built-in themes")
+                    })
+                    .into();
 
                 Ok(ValidatedOptions::Read(ReadOptions {
                     database_path,
                     tick_rate: *tick_rate,
                     flash_display_duration_seconds: *flash_display_duration_seconds,
                     network_timeout: *network_timeout,
+                    theme,
                 }))
             }
             Command::Import {
@@ -134,6 +158,7 @@ struct ReadOptions {
     tick_rate: u64,
     flash_display_duration_seconds: time::Duration,
     network_timeout: time::Duration,
+    theme: Box<Theme>,
 }
 
 #[derive(Debug)]

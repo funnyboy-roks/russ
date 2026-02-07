@@ -4,8 +4,9 @@ use crate::modes::{Mode, ReadMode, Selected};
 use crate::util;
 use anyhow::Result;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::sync::{Arc, Mutex};
+use syntect::highlighting::Theme;
 
 macro_rules! delegate_to_locked_inner {
     ($(($fn_name:ident, $t:ty)),* $(,)? ) => {
@@ -196,6 +197,7 @@ pub struct AppImpl {
     event_tx: std::sync::mpsc::Sender<crate::Event<crossterm::event::KeyEvent>>,
     io_tx: std::sync::mpsc::Sender<crate::io::Action>,
     pub is_wsl: bool,
+    pub theme: Theme,
 }
 
 impl AppImpl {
@@ -246,6 +248,7 @@ impl AppImpl {
             event_tx,
             is_wsl,
             io_tx,
+            theme: *options.theme,
         };
 
         app.update_feeds()?;
@@ -595,7 +598,9 @@ impl AppImpl {
 
             #[cfg(not(target_os = "linux"))]
             {
-                unreachable!("This should never happen. This code should only be reachable if the target OS is WSL.")
+                unreachable!(
+                    "This should never happen. This code should only be reachable if the target OS is WSL."
+                )
             }
         } else if let Some(current_link) = current_link {
             let mut ctx = ClipboardContext::new().map_err(|e| anyhow::anyhow!(e))?;

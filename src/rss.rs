@@ -169,13 +169,10 @@ impl From<&atom::Entry> for IncomingEntry {
             }),
             pub_date: entry.published().map(|date| date.with_timezone(&Utc)),
             description: None,
-            content: entry.content().and_then(|entry_content| {
-                entry_content.value().map(|entry_content| {
-                    let mut content = String::new();
-                    decode_html_entities_to_string(entry_content, &mut content);
-                    content
-                })
-            }),
+            content: entry
+                .content()
+                .and_then(|entry_content| entry_content.value())
+                .map(|c| c.to_string()),
             link: entry.links().first().map(|link| link.href().to_string()),
         }
     }
@@ -195,16 +192,10 @@ impl From<&rss::Item> for IncomingEntry {
                 author
             }),
             pub_date: entry.pub_date().and_then(parse_datetime),
-            description: entry.description().map(|entry_description| {
-                let mut description = String::new();
-                decode_html_entities_to_string(entry_description, &mut description);
-                description
-            }),
-            content: entry.content().map(|entry_content| {
-                let mut content = String::new();
-                decode_html_entities_to_string(entry_content, &mut content);
-                content
-            }),
+            description: entry
+                .description()
+                .map(|entry_description| entry_description.to_string()),
+            content: entry.content().map(|c| c.to_string()),
             link: entry.link().map(|link| link.to_owned()),
         }
     }

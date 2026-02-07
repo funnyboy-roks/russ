@@ -2,10 +2,14 @@
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Span, Text};
+use ratatui::style::{Color, Modifier, Style, Stylize};
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, LineGauge, List, ListItem, Paragraph, Wrap};
 use std::rc::Rc;
+use syntect::easy::HighlightLines;
+use syntect::parsing::SyntaxSet;
+use syntect::util::LinesWithEndings;
+use syntect_tui::into_span;
 
 use crate::app::AppImpl;
 use crate::modes::{Mode, ReadMode, Selected};
@@ -401,7 +405,25 @@ fn draw_entry(f: &mut Frame, area: Rect, app: &mut AppImpl) {
             .fg(Color::Cyan),
     ));
 
-    let paragraph = Paragraph::new(app.current_entry_text.as_str())
+    let ss = SyntaxSet::load_defaults_newlines();
+    let syntax = ss.find_syntax_by_extension("md").unwrap();
+    let mut highlighter = HighlightLines::new(syntax, &app.theme);
+
+    let text: Text<'_> = LinesWithEndings::from(&app.current_entry_text)
+        .take(usize::from(scroll) + usize::from(app.entry_lines_rendered_len) + 1)
+        .map(|l| {
+            let r: Line = highlighter
+                .highlight_line(l, &ss)
+                .unwrap()
+                .into_iter()
+                .filter_map(|s| into_span(s).ok())
+                .map(|s| s.bg(Color::Reset))
+                .collect();
+            r
+        })
+        .collect();
+
+    let paragraph = Paragraph::new(text)
         .block(block)
         .wrap(Wrap { trim: false })
         .scroll((scroll, 0));
