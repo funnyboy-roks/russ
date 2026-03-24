@@ -58,7 +58,6 @@ impl App {
         (on_up, Result<()>),
         (on_top, Result<()>),
         (on_bottom, Result<()>),
-        (restore_scroll, ()),
         (page_up, ()),
         (page_down, ()),
         (pop_feed_subscription_input, ()),
@@ -183,7 +182,6 @@ pub struct AppImpl {
     pub entry_selection_position: usize,
     pub current_entry_text: String,
     pub entry_scroll_position: u16,
-    pub saved_scroll_position: Option<u16>,
     pub entry_lines_len: usize,
     pub entry_lines_rendered_len: u16,
     pub entry_column_width: u16,
@@ -235,7 +233,6 @@ impl AppImpl {
             entries,
             selected,
             entry_scroll_position: 0,
-            saved_scroll_position: None,
             entry_lines_len: 0,
             entry_lines_rendered_len: 0,
             entry_column_width: 0,
@@ -634,7 +631,6 @@ impl AppImpl {
             }
             Selected::Entry(_) => {
                 self.entry_scroll_position = 0;
-                self.saved_scroll_position = None;
                 self.selected = {
                     self.current_entry_text = String::new();
                     Selected::Entries
@@ -724,7 +720,6 @@ impl AppImpl {
                 }
             }
             Selected::Entry(_) => {
-                self.saved_scroll_position = Some(self.entry_scroll_position);
                 self.entry_scroll_position = 0;
             }
             Selected::None => (),
@@ -747,28 +742,15 @@ impl AppImpl {
                 }
             }
             Selected::Entry(_) => {
-                self.saved_scroll_position = Some(self.entry_scroll_position);
                 self.entry_scroll_position = self
                     .entry_lines_len
-                    .checked_sub(self.entry_lines_rendered_len.into())
-                    .unwrap_or_default()
+                    .saturating_sub(self.entry_lines_rendered_len.into())
                     .saturating_sub(1) as u16;
             }
             Selected::None => (),
         }
 
         Ok(())
-    }
-
-    pub fn restore_scroll(&mut self) {
-        if let Some(saved) = self.saved_scroll_position.take() {
-            self.entry_scroll_position = saved.min(
-                self.entry_lines_len
-                    .checked_sub(self.entry_lines_rendered_len.into())
-                    .unwrap_or_default()
-                    .saturating_sub(1) as u16,
-            );
-        }
     }
 
     pub fn mode(&self) -> Mode {
